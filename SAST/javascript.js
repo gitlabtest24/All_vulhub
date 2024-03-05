@@ -1,36 +1,21 @@
-// Assuming you have required necessary modules and set up the MySQL connection (db)...
+import { Request, Response } from 'express'; // Make sure to import the appropriate types for `req` and `res`
 
-const express = require('express');
-const bodyParser = require('body-parser');
+async function index(req: Request, res: Response) {
+    const { db, User } = req.app.get('sequelize');
 
-const app = express();
-const port = 3000;
+    try {
+        let loggedInUser = await db.query( //Sink
+            `SELECT * FROM users WHERE user = '${req.query.user}' AND pass = '${req.query.pass}'`, //Source
+            {
+                model: User,
+            }
+        ); // Noncompliant
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
-// Assuming you have a route to handle incoming requests
-app.get('/users', (req, res) => {
-  // Source: User input from a query parameter (e.g., /users?username=john)
-  const userInput = req.query.username;
-
-  // Vulnerable sink: Using user input directly in the SQL query (insecure)
-  const queryString = `SELECT * FROM users WHERE username = '${userInput}'`;
-
-  // Executing the vulnerable query
-  db.query(queryString, (err, results) => {
-    if (err) {
-      console.error('Error executing query:', err);
-      res.status(500).send('Internal Server Error');
-      return;
+        res.send(JSON.stringify(loggedInUser));
+    } catch (error) {
+        console.error('An error occurred:', error);
+        res.status(500).send('Internal Server Error');
     }
 
-    // Process the query results
-    res.json(results);
-  });
-});
-
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is listening on port ${port}`);
-});
+    res.end();
+}
